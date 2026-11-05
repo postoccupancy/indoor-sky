@@ -1,0 +1,12 @@
+secrets.py
+.pio/
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.bin
+*.elf
+*.map
