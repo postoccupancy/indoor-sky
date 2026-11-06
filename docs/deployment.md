@@ -1,5 +1,12 @@
 # Build and Pi-assisted USB deployment
 
+Production flashing must use approved source pulled from origin into a separate
+clean deployment checkout on the Windows/Mac build host, not this development
+workspace or its .pio artifacts. Fetch the remote, verify the approved commit is
+published and matches the checkout, provision ignored secrets locally, then build
+and run both deployment scripts from that checkout. Source updates and a push do
+not by themselves authorize a flash or router restart.
+
 The PlatformIO project is this repository root, not `weather-brain/device`.
 Use the build-only commands in README to validate without touching hardware.
 Both original environments, partition layout, USB CDC and octal PSRAM remain intact.
@@ -13,7 +20,7 @@ Safe preflight (does not open serial or interrupt router):
 
 ```bash
 bash -n scripts/deploy_usb_via_pi.sh
-ssh -o BatchMode=yes pi@adrian-pi 'hostname; /home/pi/.venvs/esptool/bin/esptool version; ls -l /dev/serial/by-id/; systemctl is-active router; sudo -n -l'
+ssh -o BatchMode=yes pi@adrian-pi 'hostname; /home/pi/.venvs/esptool/bin/esptool version; ls -l /dev/serial/by-id/; systemctl is-active rf-router.service; sudo -n -l'
 ```
 
 Also copy a harmless temporary text file with SCP to/from a dedicated Pi `/tmp`
@@ -48,7 +55,7 @@ normal PATH; the MSYS variable has no effect there. Scripts use LF line endings.
 After flashing, check esptool verified every image and router actually recovered:
 
 ```bash
-ssh pi@adrian-pi 'systemctl is-active router; NO_PROXY=127.0.0.1 curl -kfsS https://127.0.0.1:3000/indoor-sky/status'
+ssh pi@adrian-pi 'systemctl is-active rf-router.service; NO_PROXY=127.0.0.1 curl -kfsS https://127.0.0.1:3000/indoor-sky/status'
 ```
 
 Check identity against this repo HEAD/build UTC, healthy BME/mic (~100/250 Hz), USB
@@ -56,10 +63,21 @@ packet progression, stable gap counts and no growing send failures or drops. Ope
 `https://adrian-pi:3000/indoor-sky/` and verify live data and optional PCM controls.
 `-k` above is for the address-based TLS check; certificates are unchanged.
 
-The existing trap suppresses router start errors. If deployment fails, explicitly
-check service state/logs and, when necessary, restore with `sudo systemctl start router`.
+The recovery trap preserves flash errors and fails visibly if router/previously-active resident recovery fails. If deployment fails, explicitly
+check service state/logs and, when necessary, restore with `sudo systemctl start rf-router.service`.
 Retain a private known-good build for recovery; do not publish credential-bearing
 artifacts. Flashing erases/replaces image regions, not the complete NVS partition.
 
 Extraction validation is build/preflight only. A real macOS build and deployment
 still require validation on a Mac; Windows checks cannot establish macOS execution.
+
+The host script passes the remote POSIX stage/device paths unchanged to
+scripts/flash_usb_on_pi.sh. It auto-selects a single active (or enabled) rf-router.service
+or legacy router.service, so it works before migration and after rollback. Ambiguous,
+masked, transitional or conflicting boot/active states fail before stopping anything.
+ROUTER_SERVICE=rf-router.service (or router.service for rollback) is an explicit
+override, not permission to run both. Pause flashing throughout systemd cutover.
+An active resident sidecar is restored after its router dependency is stopped;
+inactive sidecars stay inactive. The serial device and all four images are checked
+before stopping, and exclusive serial ownership is checked before writing flash.
+Run `python -m unittest discover -s tests -v` for mocked service/recovery checks.

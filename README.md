@@ -17,8 +17,8 @@ Repository ownership:
 
 Extracted from Weather Brain `device/` at
 `fa5d79cc5b575cca6fc69510db6205004e62658f` on 2026-11-05. C++ source, wire protocols,
-board settings and uploader behavior are preserved. Firmware-served Dashboard.h
-remains for the router dashboard cache/fallback; browser ownership is Electric Sea.
+board settings and uploader behavior are preserved. Electric Sea rf-router now owns the canonical dashboard and USB controls. Firmware
+Dashboard.h remains only for compatibility with older routers during rollback.
 Historical MicroPython code is isolated under `legacy/micropython/`.
 
 Install PlatformIO Core, Git and SSH/SCP. Windows additionally needs Git Bash and

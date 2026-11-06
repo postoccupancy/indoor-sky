@@ -22,6 +22,11 @@ BUILD="$ROOT/.pio/build/$ENVIRONMENT"
 BOOT_APP0="$HOME/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin"
 REMOTE_DIR="/tmp/indoor-sky-flash"
 
+case "${ROUTER_SERVICE:-}" in
+  ''|rf-router.service|router.service) ;;
+  *) echo 'ROUTER_SERVICE must be rf-router.service or router.service' >&2; exit 1 ;;
+esac
+
 echo "Building indoor-sky firmware..."
 "$PIO" run -d "$ROOT" -e "$ENVIRONMENT"
 
@@ -37,30 +42,6 @@ ssh "$PI_HOST" "mkdir -p '$REMOTE_DIR'"
 scp "$BUILD/bootloader.bin" "$BUILD/partitions.bin" "$BUILD/firmware.bin" "$BOOT_APP0" "$PI_HOST:$REMOTE_DIR/"
 
 echo "Flashing indoor-sky through the Pi USB connection..."
-MSYS_NO_PATHCONV=1 ssh "$PI_HOST" bash -s -- "$REMOTE_DIR" "$SERIAL_DEVICE" <<'REMOTE'
-set -Eeuo pipefail
-remote_dir="$1"
-serial_device="$2"
-restart_router() {
-  sudo systemctl start router >/dev/null 2>&1 || true
-}
-trap restart_router EXIT
+MSYS_NO_PATHCONV=1 ssh "$PI_HOST" bash -s -- "$REMOTE_DIR" "$SERIAL_DEVICE" "${ROUTER_SERVICE:-}" < "$ROOT/scripts/flash_usb_on_pi.sh"
 
-sudo systemctl stop router
-sleep 2
-if [[ ! -e "$serial_device" ]]; then
-  echo "Indoor-sky serial device is unavailable: $serial_device" >&2
-  exit 1
-fi
-
-/home/pi/.venvs/esptool/bin/esptool --chip esp32s3 --port "$serial_device" --baud 460800 \
-  --before default-reset --after hard-reset write-flash \
-  0x0 "$remote_dir/bootloader.bin" \
-  0x8000 "$remote_dir/partitions.bin" \
-  0xe000 "$remote_dir/boot_app0.bin" \
-  0x10000 "$remote_dir/firmware.bin"
-
-rm -rf "$remote_dir"
-REMOTE
-
-echo "Indoor-sky USB deployment complete; router service restarted."
+echo "Indoor-sky USB deployment complete; router service recovery verified."

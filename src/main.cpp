@@ -613,7 +613,7 @@ void startServices() {
   ArduinoOTA.onEnd([]() {});
   ArduinoOTA.onError([](ota_error_t) { otaInProgress = false; });
   ArduinoOTA.begin();
-  server.on("/", []() { server.sendHeader("Location", "https://adrian-pi:3000/indoor-sky/", true); server.send(302, "text/plain", "Dashboard moved to signal-router"); });
+  server.on("/", []() { server.sendHeader("Location", "https://adrian-pi:3000/indoor-sky/", true); server.send(302, "text/plain", "Dashboard moved to rf-router"); });
   server.on("/dashboard", []() { server.send_P(200, "text/html", DASHBOARD_HTML); });
   server.on("/status", []() { server.sendHeader("Cache-Control", "no-store"); server.sendHeader("Connection", "close"); server.send(200, "application/json", statusJson()); server.client().stop(); });
   server.on("/restart", []() { server.send(200, "text/plain", "restarting"); server.client().stop(); delay(200); ESP.restart(); });

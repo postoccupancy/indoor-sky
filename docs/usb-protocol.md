@@ -47,7 +47,7 @@ router decoder nibble ordering/version handling unchanged.
 
 INJS: four-byte magic, u32 JSON byte length, then UTF-8 status JSON. Identity,
 health, rates, counters and existing keys are unchanged. Router caches fresh USB
-status at GET /indoor-sky/status and retains its existing HTTP fallback.
+status at GET /indoor-sky/status without a Wi-Fi HTTP fallback in rf-router.
 
 Host-to-device commands are exactly four ASCII bytes without newline:
 
